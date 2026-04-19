@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Jnane Pro — App Design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  html, body { margin:0; padding:0; background:#f0eee9; font-family:'DM Sans', system-ui, sans-serif; }
+  *, *::before, *::after { box-sizing: border-box; }
+  /* hide scrollbars inside phone frames + category strips */
+  .jp-phone *::-webkit-scrollbar { display: none; }
+  .jp-phone * { scrollbar-width: none; -ms-overflow-style: none; }
+
+  /* Tweaks panel */
+  #tweaks {
+    position: fixed; right: 20px; bottom: 20px; width: 260px;
+    background: rgba(255,255,255,0.95); backdrop-filter: blur(20px);
+    border-radius: 16px; padding: 16px; z-index: 9999;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.06);
+    font-family: 'DM Sans', system-ui, sans-serif;
+    display: none;
+  }
+  #tweaks.on { display: block; }
+  #tweaks h4 { margin: 0 0 12px; font-size: 11px; letter-spacing: 1.5px;
+    text-transform: uppercase; color: #1E5B3A; font-weight: 700; }
+  #tweaks .row { display: flex; gap: 6px; margin-bottom: 10px; }
+  #tweaks .row:last-child { margin-bottom: 0; }
+  #tweaks button {
+    flex: 1; padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(0,0,0,0.08);
+    background: #fff; font-size: 12px; font-weight: 500; color: #1C1F1B;
+    font-family: inherit; cursor: pointer;
+  }
+  #tweaks button.on { background: #1E5B3A; color: #fff; border-color: #1E5B3A; }
+  #tweaks .label { font-size: 10.5px; color: #7A7F78; margin-bottom: 6px;
+    letter-spacing: 0.4px; text-transform: uppercase; font-weight: 600; }
+</style>
+</head>
+<body>
+  <div id="root"></div>
+  <div id="tweaks">
+    <h4>Tweaks</h4>
+    <div class="label">Plateforme</div>
+    <div class="row" data-group="platform">
+      <button data-val="ios" class="on">iOS</button>
+      <button data-val="android">Android</button>
+    </div>
+    <div class="label">Thème</div>
+    <div class="row" data-group="theme">
+      <button data-val="light" class="on">Light</button>
+      <button data-val="dark">Dark</button>
+    </div>
+    <div class="label">Langue</div>
+    <div class="row" data-group="lang">
+      <button data-val="fr" class="on">Français</button>
+      <button data-val="ar">العربية</button>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel" src="frames/ios-frame.jsx"></script>
+  <script type="text/babel" src="frames/android-frame.jsx"></script>
+  <script type="text/babel" src="design-canvas.jsx"></script>
+  <script type="text/babel" src="components/tokens.jsx"></script>
+  <script type="text/babel" src="components/Onboarding.jsx"></script>
+  <script type="text/babel" src="components/Home.jsx"></script>
+  <script type="text/babel" src="components/ServiceList.jsx"></script>
+  <script type="text/babel" src="components/ServiceDetail.jsx"></script>
+  <script type="text/babel" src="components/QuoteForm.jsx"></script>
+  <script type="text/babel" src="components/Tracking.jsx"></script>
+
+  <script type="text/babel" data-presets="react">
+
+const TWEAKS = /*EDITMODE-BEGIN*/{
+  "platform": "android",
+  "theme": "light",
+  "lang": "fr"
+} /*EDITMODE-END*/;
+
+// read persisted, else default
+const saved = JSON.parse(localStorage.getItem('jp-tweaks') || '{}');
+const state = { ...TWEAKS, ...saved };
+
+// Phone frame wrapper - wraps a screen in iOS or Android frame
+function Phone({ label, children, showTabBar = false, ios, tbActive = 'home', scrollable = true, noChrome = false }) {
+  const w = ios ? 390 : 412;
+  const h = ios ? 844 : 892;
+
+  const content =
+  <div className="jp-phone" style={{
+    position: 'relative', height: '100%', overflow: 'hidden'
+  }}>
+          <div style={{
+      position: 'absolute', inset: 0, overflow: scrollable ? 'auto' : 'hidden'
+    }}>
+            {children}
+          </div>
+          {showTabBar && <HomeTabBar active={tbActive} ios={ios} />}
+        </div>;
+
+
+  return (
+    <DCArtboard label={label} width={w + (ios ? 0 : 0)} height={h}>
+          {ios ?
+      <div style={{ width: w, height: h, position: 'relative' }}>
+              {/* iOS status bar overlay */}
+              {!noChrome &&
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 50, pointerEvents: 'none' }}>
+                  <IOSStatusBar dark={false} />
+                </div>
+        }
+              {/* Dynamic island */}
+              {!noChrome &&
+        <div style={{
+          position: 'absolute', top: 11, left: '50%', transform: 'translateX(-50%)',
+          width: 126, height: 37, borderRadius: 24, background: '#000', zIndex: 60,
+          pointerEvents: 'none'
+        }} />
+        }
+              {/* paddingtop so content starts below status bar */}
+              <div style={{ height: '100%', paddingTop: noChrome ? 0 : 54 }}>
+                {content}
+              </div>
+              {/* Home indicator */}
+              {!noChrome &&
+        <div style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 70,
+          height: 34, display: 'flex', justifyContent: 'center', alignItems: 'flex-end',
+          paddingBottom: 8, pointerEvents: 'none'
+        }}>
+                  <div style={{ width: 139, height: 5, borderRadius: 100,
+            background: 'rgba(0,0,0,0.3)' }} />
+                </div>
+        }
+            </div> :
+
+      <div style={{
+        width: w, height: h, position: 'relative',
+        background: JP.cream
+      }}>
+              {/* Android status bar */}
+              {!noChrome &&
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 50,
+          background: JP.cream, pointerEvents: 'none' }}>
+                  <AndroidStatusBar />
+                </div>
+        }
+              <div style={{ height: '100%', paddingTop: noChrome ? 0 : 40, paddingBottom: noChrome ? 0 : 20 }}>
+                {content}
+              </div>
+              {/* Android gesture bar */}
+              {!noChrome &&
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 70,
+          height: 20, display: 'flex', justifyContent: 'center', alignItems: 'flex-end',
+          paddingBottom: 6, pointerEvents: 'none' }}>
+                  <div style={{ width: 108, height: 4, borderRadius: 2,
+            background: 'rgba(28,31,27,0.4)' }} />
+                </div>
+        }
+            </div>
+      }
+        </DCArtboard>);
+
+}
+
+function App({ platform, theme, lang }) {
+  const ios = platform === 'ios';
+  return (
+    <DesignCanvas>
+          {/* Title */}
+          <div style={{ padding: '40px 60px 40px', maxWidth: 900 }}>
+            <div style={{ fontSize: 13, letterSpacing: 3, textTransform: 'uppercase',
+          color: '#7A7F78', fontWeight: 600, marginBottom: 8 }}>JNANE PRO
+
+        </div>
+            <h1 style={{ margin: 0,
+          fontWeight: 400, fontSize: 64, lineHeight: 1, letterSpacing: -1,
+          color: '#173F2A', fontFamily: "Dosis" }}>
+              Des jardiniers de confiance,<br />
+              <em style={{ fontStyle: 'italic', color: '#1E5B3A', fontFamily: "\"DM Sans\"", fontSize: "40px" }}>pour toutes les saisons.</em>
+            </h1>
+            <p style={{ margin: '18px 0 0', fontSize: 16, color: '#4A4E48', maxWidth: 620,
+          lineHeight: 1.55 }}>Plateforme mobile pour l'entretien de jardins au Maroc pour les villas, ryads, résidences. Six écrans principaux explorés ci-dessous, conçus pour un ton Méditerranéen : photo-centré, généreux, professionnel sans être froid.
+
+
+
+        </p>
+
+            {/* Brand tokens */}
+            <div style={{ marginTop: 32, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+              {[
+          { c: '#1E5B3A', n: 'Vert profond', v: 'Primary · #1E5B3A' },
+          { c: '#7CB342', n: 'Vert feuille', v: 'Accent · #7CB342' },
+          { c: '#E8DCC4', n: 'Sable', v: 'Neutre · #E8DCC4' },
+          { c: '#FBF7EE', n: 'Crème', v: 'Surface · #FBF7EE' },
+          { c: '#1C1F1B', n: 'Encre', v: 'Texte · #1C1F1B' }].
+          map((s) =>
+          <div key={s.n} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 10, background: s.c,
+              boxShadow: '0 0 0 1px rgba(0,0,0,0.06)' }} />
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: '#1C1F1B' }}>{s.n}</div>
+                    <div style={{ fontSize: 10.5, color: '#7A7F78', fontFamily: 'ui-monospace, monospace' }}>
+                      {s.v}
+                    </div>
+                  </div>
+                </div>
+          )}
+            </div>
+          </div>
+
+          {/* Section 1 — Onboarding */}
+          <DCSection title="1 · Onboarding"
+      subtitle="Trois slides éditoriaux, photo plein-cadre, headline sérif + sans">
+            <Phone ios={ios} label="01 · Bienvenue" noChrome>
+              <Onboarding initialSlide={0} />
+            </Phone>
+            <Phone ios={ios} label="02 · Expertise palmiers" noChrome>
+              <Onboarding initialSlide={1} />
+            </Phone>
+            <Phone ios={ios} label="03 · Devis transparent" noChrome>
+              <Onboarding initialSlide={2} />
+            </Phone>
+          </DCSection>
+
+          {/* Section 2 — Home */}
+          <DCSection title="2 · Accueil"
+      subtitle="Salut personnalisé, recherche, catégories, promo printemps, services à proximité">
+            <Phone ios={ios} label="Home — light" showTabBar tbActive="home">
+              <HomeStatusPad h={ios ? 4 : 4} />
+              <Home />
+            </Phone>
+            <div style={{ position: 'relative' }}>
+              <DCPostIt top={20} left={-20} rotate={3} width={180}>
+                Promo card uses the deep green as anchor — warmth from sand photo mask on the right.
+              </DCPostIt>
+            </div>
+          </DCSection>
+
+          {/* Section 3 — Service list */}
+          <DCSection title="3 · Liste des services"
+      subtitle="Filtres par catégorie et chips rapides · cartes services généreuses avec photo, note, durée, prix">
+            <Phone ios={ios} label="Category: Entretien" scrollable>
+              <ServiceList />
+            </Phone>
+          </DCSection>
+
+          {/* Section 4 — Service detail */}
+          <DCSection title="4 · Détail d'un service"
+      subtitle="Hero plein cadre, carte titre flottante, description, inclus, FAQ pliable, CTA « Demander un devis »">
+            <Phone ios={ios} label="Palmiers · Élagage">
+              <ServiceDetail />
+            </Phone>
+          </DCSection>
+
+          {/* Section 5 — Quote form */}
+          <DCSection title="5 · Demande de devis"
+      subtitle="Étape 2 sur 3 — type, surface, photos (3/10), adresse GPS, créneau">
+            <Phone ios={ios} label="Form · step 2/3">
+              <QuoteForm />
+            </Phone>
+            <div style={{ position: 'relative' }}>
+              <DCPostIt top={40} left={-20} rotate={-2} width={180}>
+                Le slider de surface utilise le vert foncé — thumb blanc avec anneau vert pour bonne affordance tactile.
+              </DCPostIt>
+            </div>
+          </DCSection>
+
+          {/* Section 6 — Tracking */}
+          <DCSection title="6 · Confirmation & suivi"
+      subtitle="Status timeline + carte technicien avec photo, note, actions. Mini-carte avec ETA live.">
+            <Phone ios={ios} label="En route · 18 min">
+              <Tracking />
+            </Phone>
+          </DCSection>
+
+          <div style={{ height: 40 }} />
+        </DesignCanvas>);
+
+}
+
+// Mount
+const root = ReactDOM.createRoot(document.getElementById('root'));
+function render() {
+  root.render(<App platform={state.platform} theme={state.theme} lang={state.lang} />);
+}
+render();
+
+// Tweaks wiring
+document.querySelectorAll('#tweaks [data-group]').forEach((grp) => {
+  const g = grp.dataset.group;
+  grp.querySelectorAll('button').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      grp.querySelectorAll('button').forEach((b) => b.classList.remove('on'));
+      btn.classList.add('on');
+      state[g] = btn.dataset.val;
+      localStorage.setItem('jp-tweaks', JSON.stringify(state));
+      window.parent.postMessage({ type: '__edit_mode_set_keys', edits: { [g]: btn.dataset.val } }, '*');
+      render();
+    });
+  });
+  // reflect current
+  const cur = state[g];
+  grp.querySelectorAll('button').forEach((b) => {
+    b.classList.toggle('on', b.dataset.val === cur);
+  });
+});
+
+// Tweaks show/hide
+window.addEventListener('message', (e) => {
+  const d = e.data || {};
+  if (d.type === '__activate_edit_mode') document.getElementById('tweaks').classList.add('on');
+  if (d.type === '__deactivate_edit_mode') document.getElementById('tweaks').classList.remove('on');
+});
+window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+</script>
+</body>
+</html>
